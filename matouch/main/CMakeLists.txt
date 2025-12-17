@@ -29,6 +29,8 @@ if(CONFIG_BOARD_TYPE_3_5_ili9488_ft6236)
     set(BOARD_TYPE "3-5-ili9488-ft6236")
 elseif(CONFIG_BOARD_TYPE_1_28_gc9a01_cst816s)
     set(BOARD_TYPE "1-28-gc9a01-cst816s")
+elseif(CONFIG_BOARD_TYPE_2_8_st7798v_gt911)
+    set(BOARD_TYPE "2-8-st7798v-gt911")
 endif()
 
 message("current board type: ${BOARD_TYPE}")
@@ -62,4 +64,4 @@ idf_component_register(SRCS ${SOURCES}
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     )
 
-# spiffs_create_partition_image(storage ../spiffs FLASH_IN_PROJECT)
+spiffs_create_partition_image(storage ../spiffs FLASH_IN_PROJECT)

@@ -15,6 +15,9 @@ choice BOARD_TYPE
         bool "1-28-gc9a01-cst816s"
         depends on IDF_TARGET_ESP32S3
         select PCF85063A_ENABLE
+    config BOARD_TYPE_2_8_st7798v_gt911
+        bool "2-8-st7798v-gt911"
+        depends on IDF_TARGET_ESP32S3
 endchoice
 
 choice DEVELOPMENT_MODE

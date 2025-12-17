@@ -31,5 +31,8 @@ dependencies:
   espressif/esp_lcd_gc9a01: 2.0.4
   espressif/esp_lcd_touch_cst816s: 1.1.0
 
+  # 2-8-st7798v-gt911
+  espressif/esp_lcd_touch_gt911: 1.1.3
+
 
 

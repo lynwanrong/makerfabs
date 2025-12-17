@@ -5,8 +5,8 @@ set(REQUIRES_LIST)
 
 # Check if CONFIG_SPIFFS_ENABLE is enabled
 if(CONFIG_SPIFFS_ENABLE)
-    list(APPEND SOURCES "bsp_spiffs/bsp_spiffs.c")
-    list(APPEND INCLUDE_DIRS "bsp_spiffs")
+    list(APPEND SOURCES "spiffs/bsp_spiffs.c")
+    list(APPEND INCLUDE_DIRS "spiffs")
 endif()
 
 if(CONFIG_SDCARD_ENABLE)

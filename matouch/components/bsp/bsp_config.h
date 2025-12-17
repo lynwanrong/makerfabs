@@ -13,7 +13,7 @@
 
 
 #if CONFIG_SPIFFS_ENABLE
-#include "bsp_spiffs/bsp_spiffs.h"
+#include "spiffs/bsp_spiffs.h"
 #endif
 
 #if CONFIG_QMI8658_ENABLE
