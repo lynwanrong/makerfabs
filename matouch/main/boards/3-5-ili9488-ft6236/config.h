@@ -11,6 +11,9 @@
 #define SPI2_MISO_PIN   GPIO_NUM_41
 #define SPI2_CLK_PIN    GPIO_NUM_42
 
+#define SPI3_MOSI_PIN   GPIO_NUM_13
+#define SPI3_MISO_PIN   GPIO_NUM_12
+#define SPI3_CLK_PIN    GPIO_NUM_14
 
 
 // 如果使用 Duplex I2S 模式，请注释下面一行
@@ -41,14 +44,17 @@
 #define VOLUME_UP_BUTTON_GPIO       GPIO_NUM_NC
 #define VOLUME_DOWN_BUTTON_GPIO     GPIO_NUM_NC
 
-
+#if CONFIG_3_5_IlI9488_SPI_FT6236
+#define DISPLAY_BACKLIGHT_PIN       GPIO_NUM_48
+#else
 #define DISPLAY_BACKLIGHT_PIN       GPIO_NUM_45
-#define DISPLAY_MOSI_PIN            GPIO_NUM_13
-#define DISPLAY_MISO_PIN            GPIO_NUM_12
-#define DISPLAY_CLK_PIN             GPIO_NUM_18
-#define DISPLAY_DC_PIN              GPIO_NUM_17
+#endif
+#define DISPLAY_MOSI_PIN            SPI2_MOSI_PIN
+#define DISPLAY_MISO_PIN            SPI2_MISO_PIN
+#define DISPLAY_CLK_PIN             SPI2_CLK_PIN
+#define DISPLAY_DC_PIN              GPIO_NUM_21
 #define DISPLAY_RST_PIN             GPIO_NUM_NC
-#define DISPLAY_CS_PIN              GPIO_NUM_46
+#define DISPLAY_CS_PIN              GPIO_NUM_15
 #define DISPLAY_RD_PIN              GPIO_NUM_48
 
 #define EXAMPLE_LCD_IO_SPI_CS       GPIO_NUM_45

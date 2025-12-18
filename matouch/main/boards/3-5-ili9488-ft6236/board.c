@@ -77,6 +77,7 @@ static void i2c_init(void)
 
 void spi_init(void)
 {
+    // sdcard
     const spi_bus_config_t spi2_cfg = {
         .mosi_io_num    = SPI2_MOSI_PIN,
         .miso_io_num    = SPI2_MISO_PIN,
@@ -85,11 +86,31 @@ void spi_init(void)
         .quadwp_io_num  = -1,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &spi2_cfg, SPI_DMA_CH_AUTO));
+
+    #if CONFIG_3_5_IlI9488_SPI_FT6236
+        const spi_bus_config_t spi3_cfg = {
+            .mosi_io_num    = SPI3_MOSI_PIN,
+            .miso_io_num    = SPI3_MISO_PIN,
+            .sclk_io_num    = SPI3_CLK_PIN,
+            .quadhd_io_num  = -1,
+            .quadwp_io_num  = -1,
+            .data4_io_num   = -1,
+            .data5_io_num   = -1,
+            .data6_io_num   = -1,
+            .data7_io_num   = -1,
+            .max_transfer_sz = DISPLAY_WIDTH * 50 * sizeof(uint16_t),
+            .flags = SPICOMMON_BUSFLAG_SCLK | SPICOMMON_BUSFLAG_MISO |
+                    SPICOMMON_BUSFLAG_MOSI | SPICOMMON_BUSFLAG_MASTER,
+            .intr_flags = ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM                
+        };
+        ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &spi3_cfg, SPI_DMA_CH_AUTO)); 
+    #endif
 }
 
 
 void display_init(void)
 {
+#if CONFIG_3_5_IlI9488_80_FT6236
     gpio_config_t bl_cfg = {
         .pin_bit_mask = 1ULL << DISPLAY_BACKLIGHT_PIN,
         .mode = GPIO_MODE_OUTPUT,
@@ -155,6 +176,40 @@ void display_init(void)
         .lcd_param_bits = 8,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_cfg, &io_handle));
+#else
+    gpio_config_t bl_cfg = {
+        .pin_bit_mask = 1ULL << DISPLAY_BACKLIGHT_PIN,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&bl_cfg));
+    gpio_set_level(DISPLAY_BACKLIGHT_PIN, 1);
+
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_io_spi_config_t io_config = {
+        .dc_gpio_num = DISPLAY_DC_PIN,
+        .cs_gpio_num = DISPLAY_CS_PIN,
+        .pclk_hz = 40 * 1000 * 1000,
+        .trans_queue_depth = 10,
+        .lcd_cmd_bits = 8,
+        .spi_mode = 0,
+        .lcd_param_bits = 8,
+        .cs_ena_pretrans = 0,
+        .cs_ena_posttrans = 0,
+        .on_color_trans_done = NULL,
+        .user_ctx = NULL,
+        .flags = {
+            .dc_low_on_data = 0,
+            .octal_mode = 0,
+            .sio_mode = 0,
+            .lsb_first = 0,
+            .cs_high_active = 0
+        }
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(SPI3_HOST, &io_config, &io_handle));
+#endif
 
     ESP_LOGI(TAG, "Install ILLI9488 LCD control panel");
 
@@ -173,8 +228,8 @@ void display_init(void)
     ESP_ERROR_CHECK(esp_lcd_panel_init(disp_panel));
     // ESP_ERROR_CHECK(esp_lcd_panel_invert_color(disp_panel, true));
     // ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(disp_panel, false));
-    ESP_ERROR_CHECK(esp_lcd_panel_mirror(disp_panel, false, false));
-    ESP_ERROR_CHECK(esp_lcd_panel_set_gap(disp_panel, 0, 0));
+    // ESP_ERROR_CHECK(esp_lcd_panel_mirror(disp_panel, false, false));
+    // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(disp_panel, 0, 0));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(disp_panel, true));
 
     disp = spi_lcd_display(io_handle, disp_panel,
