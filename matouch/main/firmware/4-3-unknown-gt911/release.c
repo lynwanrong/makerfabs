@@ -16,8 +16,8 @@ static const char *TAG = "RELEASE";
 
 static void release_task(void *arg)
 {
-    extern void image_switch_idf(const char *path);
-    image_switch_idf("/sdcard/images");
+    extern void image_switch_lvgl(const char *path);
+    image_switch_lvgl("/sdcard/images");
     vTaskDelete(NULL);
 }
 

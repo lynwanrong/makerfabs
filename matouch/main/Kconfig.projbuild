@@ -21,6 +21,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_4_3_UNKNOWN_GT911
         bool "4-3-unknown-gt911"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_7_0_UNKNOWN_GT911
+        bool "7-0-unknown-gt911"
+        depends on IDF_TARGET_ESP32S3
 endchoice
 
 if BOARD_TYPE_3_5_IlI9488_FT6236

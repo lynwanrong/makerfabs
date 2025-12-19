@@ -423,7 +423,11 @@ static void release_task(void *arg)
 
     // lv_demo_purecolor_png_switch();
     // lvgl_demos_test();
-    xuanniu_test();
+    // xuanniu_test();
+
+    extern void image_switch_lvgl(const char *path);
+    image_switch_lvgl("/sdcard/images");
+
 
     vTaskDelete(NULL); 
 }

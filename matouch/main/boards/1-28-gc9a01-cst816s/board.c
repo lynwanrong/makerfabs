@@ -141,7 +141,7 @@ void spi_init(void)
         .data5_io_num   = -1,
         .data6_io_num   = -1,
         .data7_io_num   = -1,
-        .max_transfer_sz = DISPLAY_WIDTH * 40 * sizeof(uint16_t)
+        .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t)
     };
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &spi2_cfg, SPI_DMA_CH_AUTO));
 }
@@ -178,7 +178,7 @@ void display_init(void)
     };
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = DISPLAY_RST_PIN,          // Set to -1 if not use
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,  // RGB element order: R-G-B
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,  // RGB element order: R-G-B
         .bits_per_pixel = 16,                        // Implemented by LCD command `3Ah` (16/18)
         .vendor_config = &vendor_config          // Uncomment this line if use custom initialization commands
     };
@@ -252,12 +252,20 @@ void board_init(void)
 
     touch_init(); 
 
-    /*
-        other functions init
-    */
+    /*********************************************** 
+                    other function
+    1. pcf85063a(rtc)
+    2. sdcard
+    ************************************************/
 
+#if CONFIG_SDCARD_ENABLE
     ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+#endif
 
+
+#if CONFIG_PCF85063A_ENABLE
+    ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+#endif
 
     ESP_LOGI(TAG, "Board initialized successfully");
 
