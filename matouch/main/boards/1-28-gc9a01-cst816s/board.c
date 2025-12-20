@@ -264,7 +264,7 @@ void board_init(void)
 
 
 #if CONFIG_PCF85063A_ENABLE
-    ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+    // ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
 #endif
 
     ESP_LOGI(TAG, "Board initialized successfully");

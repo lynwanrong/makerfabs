@@ -5,6 +5,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <esp_log.h>
 
 
 static const char *TAG = "bsp_sdcard";
@@ -64,6 +65,7 @@ esp_err_t bsp_sdcard_mount(const char *mount_point, gpio_num_t sd_cs)
     };
 
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    // host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
 
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
     slot_config.gpio_cs = sd_cs;

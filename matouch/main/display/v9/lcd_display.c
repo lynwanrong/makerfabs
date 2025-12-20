@@ -3,6 +3,7 @@
 
 #include "lcd_display.h"
 #include "esp_lvgl_port.h"
+#include "esp_psram.h"
 
 static const char *TAG = "lcd_display";
 
@@ -13,6 +14,18 @@ lv_display_t *spi_lcd_display(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_
     ESP_LOGI(TAG, "Initialize LVGL library");
     lv_init();
 
+#if CONFIG_SPIRAM
+    // lv image cache, currently only PNG is supported
+    size_t psram_size_mb = esp_psram_get_size() / 1024 / 1024;
+    if (psram_size_mb >= 8) {
+        lv_image_cache_resize(2 * 1024 * 1024, true);
+        ESP_LOGI(TAG, "Use 2MB of PSRAM for image cache");
+    } else if (psram_size_mb >= 2) {
+        lv_image_cache_resize(512 * 1024, true);
+        ESP_LOGI(TAG, "Use 512KB of PSRAM for image cache");
+    }
+#endif
+
     ESP_LOGI(TAG, "Initialize LVGL port");
     lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     port_cfg.task_priority = 1;
@@ -21,12 +34,12 @@ lv_display_t *spi_lcd_display(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_
 #endif
     lvgl_port_init(&port_cfg);
 
-    ESP_LOGI(TAG, "Add display screen");
+    ESP_LOGI(TAG, "Adding LCD display");
     const lvgl_port_display_cfg_t disp_cfg = {
         .io_handle = panel_io,
         .panel_handle = panel,
         .control_handle = NULL,
-        .buffer_size = height / 10 * width, // Buffer for 10 lines
+        .buffer_size = height / 4 * width, // Buffer for 10 lines
         .double_buffer = 1,
         .hres = (uint32_t)width,
         .vres = (uint32_t)height,
