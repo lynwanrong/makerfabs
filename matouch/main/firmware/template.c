@@ -12,6 +12,8 @@
 #include "esp_lvgl_port.h"
 #include "lv_demos.h"
 
+#include "board.h"
+
 static char *TAG = "template";
 
 
@@ -26,6 +28,10 @@ static int img_count = 0;
 
 static jpeg_decoder_handle_t jpgd_handle;
 static char img_dir_path[256];
+
+// @brief pcf85063a 
+static lv_obj_t *ui_time_label = NULL;
+static lv_obj_t *ui_date_label = NULL;
 
 
 
@@ -64,7 +70,7 @@ static void image_switch_rb()
 }
 
 // 使用 LVGL 自带的编解码
-void image_switch_lvgl(const char *image_dir_path)
+void template_image_switch_lvgl(const char *image_dir_path)
 {
     file_iterator = file_iterator_new(image_dir_path);
     assert(file_iterator);
@@ -90,116 +96,12 @@ void image_switch_lvgl(const char *image_dir_path)
     lvgl_port_unlock();
 }
 
-static void image_switch_handle()
-{
-    // jpeg_decode_picture_info_t image_info;
-    // jpeg_decode_memory_alloc_cfg_t rx_mem_cfg = {
-    //     .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    // };
-
-    // jpeg_decode_memory_alloc_cfg_t tx_mem_cfg = {
-    //     .buffer_direction = JPEG_DEC_ALLOC_INPUT_BUFFER,
-    // };
-    
-    // jpeg_decode_cfg_t decode_cfg_rgb = {
-    //     .output_format = JPEG_DECODE_OUT_FORMAT_RGB565,
-    //     .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR,
-    // };
-
-    // jpeg_decode_cfg_t decode_cfg_gray = {
-    //     .output_format = JPEG_DECODE_OUT_FORMAT_GRAY,
-    // };
-
-    // FILE *f = fopen(image_switch_get_path(img_index), "rb");
-    // if (f == NULL) {
-    //     ESP_LOGE(TAG, "open file failed");
-    //     return ;
-    // }
-
-    // fseek(f, 0, SEEK_END);
-    // int image_size_fp = ftell(f);
-    // fseek(f, 0, SEEK_SET);
-
-    // size_t input_buffer_size_image = 0;
-    // uint8_t *input_buf =  (uint8_t*)jpeg_alloc_decoder_mem(image_size_fp, &tx_mem_cfg, &input_buffer_size_image);
-    // if(input_buf == NULL)
-    // {
-    //     ESP_LOGE(TAG,"alloc input buf failed");
-    //     return;
-    // }
-    // fread(input_buf,1,input_buffer_size_image,f);
-    // fclose(f);
-    // ESP_ERROR_CHECK(jpeg_decoder_get_info(input_buf,input_buffer_size_image,&image_info));
-
-    // size_t output_buf_size = 0;
-    // uint8_t *output_buf = (uint8_t*)jpeg_alloc_decoder_mem(image_info.width * image_info.height * 2, &rx_mem_cfg, &output_buf_size);
-    // if(output_buf == NULL)
-    // {
-    //     ESP_LOGE(TAG,"alloc output buf failed");
-    //     return;
-    // }
-    // uint32_t out_size_image = 0;
-    
-    // ESP_ERROR_CHECK(jpeg_decoder_process(jpgd_handle, &decode_cfg_rgb, input_buf, input_buffer_size_image, output_buf, output_buf_size, &out_size_image));
-
-    // lvgl_port_lock(0);
-
-    // // 配置 LVGL 图像描述符
-    // img_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
-    // img_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
-    // img_dsc.header.flags = 0;
-    // img_dsc.header.w = image_info.width;
-    // img_dsc.header.h = image_info.height;
-    // img_dsc.header.stride = image_info.width * 2;
-    // img_dsc.data_size = out_size_image;
-    // img_dsc.data = output_buf;
-
-    // // 设置图片源
-    // if(img_obj) {
-    //     lv_image_set_src(img_obj, &img_dsc);
-    // }
-
-    // lvgl_port_unlock();
-
-    // free(input_buf);
-    // free(output_buf);
-}
-
-
-void image_switch_idf(const char *image_dir_path)
-{
-    file_iterator = file_iterator_new(image_dir_path);
-    assert(file_iterator);
-
-    strcpy(img_dir_path, image_dir_path);
-
-    img_count = file_iterator_get_count(file_iterator);
-    if (img_count) 
-        ESP_LOGI(TAG, "image count: %d", img_count);
-    else {
-        ESP_LOGW(TAG, "no image found");
-        return ;
-    }
-
-    lv_obj_add_event(lv_scr_act(), image_switch_rb, LV_EVENT_GESTURE, NULL);
-
-    for(int i = 0; i < img_count; i++) {
-        ESP_LOGI(TAG, "%s", image_switch_get_path(i));
-    }
-
-    // jpeg_decode_engine_cfg_t decode_eng_cfg = {
-    //     .timeout_ms = 40,
-    // };
-    // ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &jpgd_handle));
-
-    // image_switch_handle();
-}
 
 /* =============================================================================================================
                                                 LVGL Demos
     ============================================================================================================ */
 
-void lvgl_demos_test()
+void template_lvgl_demos_test()
 {
     lvgl_port_lock(0);
 
@@ -207,3 +109,75 @@ void lvgl_demos_test()
 
     lvgl_port_unlock();
 }
+
+
+/* =============================================================================================================
+                                            pcf85063a rtc
+    ============================================================================================================ */
+
+#if CONFIG_PCF85063A_ENABLE
+static void clock_update_timer_cb(lv_timer_t *timer)
+{
+    if (board_handle->pcf85063a == NULL || board_handle->pcf85063a->get_time_data == NULL) {
+        return;
+    }
+
+    pcf85063a_datetime_t time_data;
+    
+    // 调用您的 BSP 驱动获取时间
+    // 注意：这里是在 LVGL 任务上下文中调用的。
+    // 因为您的驱动使用了互斥锁 (xSemaphoreTake)，所以它是线程安全的。
+    esp_err_t ret = board_handle->pcf85063a->get_time_data(&time_data);
+    if (ret == ESP_OK) {
+        // 更新时间显示 (HH:MM:SS)
+        // 请根据您 pcf85063a.h 中实际的结构体成员名称修改下面的 .hours, .minutes 等
+        if (ui_time_label) {
+            lv_label_set_text_fmt(ui_time_label, "%02d:%02d:%02d", 
+                                  time_data.hour, 
+                                  time_data.min, 
+                                  time_data.sec);
+        }
+
+        // 更新日期显示 (YYYY-MM-DD)
+        if (ui_date_label) {
+            lv_label_set_text_fmt(ui_date_label, "20%02d-%02d-%02d", 
+                                  time_data.year, 
+                                  time_data.month, 
+                                  time_data.day);
+        }
+    } else {
+        ESP_LOGW(TAG, "Failed to read RTC time");
+    }
+}
+
+void template_pcf85063a_test()
+{
+    // 1. 获取当前活动屏幕
+    lv_obj_t *scr = lv_screen_active();
+
+    // 2. 创建一个容器来居中内容
+    lv_obj_t *cont = lv_obj_create(scr);
+    lv_obj_set_size(cont, 240, 160); // 根据您的屏幕大小调整
+    lv_obj_center(cont);
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 3. 创建时间 Label (大字体)
+    ui_time_label = lv_label_create(cont);
+    // 如果您有启用的字体，可以解开下面这行的注释
+    // lv_obj_set_style_text_font(ui_time_label, &lv_font_montserrat_28, 0); 
+    lv_label_set_text(ui_time_label, "00:00:00");
+
+    // 4. 创建日期 Label (小字体)
+    ui_date_label = lv_label_create(cont);
+    lv_label_set_text(ui_date_label, "YYYY-MM-DD");
+
+    // 5. 创建一个 LVGL 定时器，每 1000ms (1秒) 触发一次
+    lv_timer_create(clock_update_timer_cb, 1000, NULL);
+
+    // 立即手动调用一次以避免第一秒显示 "00:00:00"
+    clock_update_timer_cb(NULL);
+}
+
+#endif // CONFIG_PCF85063A_ENABLE

@@ -6,6 +6,14 @@
 #define AUDIO_INPUT_SAMPLE_RATE  16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
 
+#define SPI2_MOSI_PIN   GPIO_NUM_13
+#define SPI2_MISO_PIN   GPIO_NUM_12
+#define SPI2_CLK_PIN    GPIO_NUM_48
+
+#define SPI3_MOSI_PIN   GPIO_NUM_13
+#define SPI3_MISO_PIN   GPIO_NUM_12
+#define SPI3_CLK_PIN    GPIO_NUM_14
+
 // 如果使用 Duplex I2S 模式，请注释下面一行
 #define AUDIO_I2S_METHOD_SIMPLEX
 
@@ -36,8 +44,9 @@
 
 
 #define DISPLAY_BACKLIGHT_PIN       GPIO_NUM_45
-#define DISPLAY_MOSI_PIN            GPIO_NUM_13
-#define DISPLAY_CLK_PIN             GPIO_NUM_48
+#define DISPLAY_MOSI_PIN            SPI2_MOSI_PIN
+#define DISPLAY_MISO_PIN            SPI2_MISO_PIN
+#define DISPLAY_CLK_PIN             SPI2_CLK_PIN
 #define DISPLAY_DC_PIN              GPIO_NUM_21
 #define DISPLAY_RST_PIN             GPIO_NUM_NC
 #define DISPLAY_CS_PIN              GPIO_NUM_40
@@ -58,6 +67,12 @@
 #define TOUCH_SCL_PIN       GPIO_NUM_38
 #define TOUCH_INT_PIN       GPIO_NUM_14
 #define TOUCH_RST_PIN       GPIO_NUM_18
+
+#define SDCARD_MOUNT_POINT          "/sdcard"
+#define SDCARD_CS_PIN               GPIO_NUM_47
+#define SDCARD_MISO_PIN             SPI2_MOSI_PIN
+#define SDCARD_MOSI_PIN             SPI2_MOSI_PIN
+#define SDCARD_CLK_PIN              SPI2_CLK_PIN
 
 
 

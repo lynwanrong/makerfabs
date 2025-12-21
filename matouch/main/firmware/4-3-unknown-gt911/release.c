@@ -10,14 +10,14 @@
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
 
-#include "../../boards/4-3-unknown-gt911/board.h"
+#include "board.h"
 
 static const char *TAG = "RELEASE";
 
 static void release_task(void *arg)
 {
-    extern void image_switch_lvgl(const char *path);
-    image_switch_lvgl("/sdcard/images");
+    extern void template_image_switch_lvgl(const char *path);
+    template_image_switch_lvgl("/sdcard/images");
     vTaskDelete(NULL);
 }
 

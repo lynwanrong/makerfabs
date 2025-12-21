@@ -85,6 +85,7 @@ void spi_init(void)
     const spi_bus_config_t buscfg = {
         .sclk_io_num = DISPLAY_CLK_PIN,
         .mosi_io_num = DISPLAY_MOSI_PIN,
+        .miso_io_num = DISPLAY_MISO_PIN,
         .quadhd_io_num = -1,
         .quadwp_io_num = -1,
         .max_transfer_sz = DISPLAY_WIDTH * 50 * sizeof(uint16_t)
@@ -194,8 +195,11 @@ void touch_init(void)
 
 void board_init(void)
 {
-    // board_handle = (board_t)malloc(sizeof(struct board_handle_t));
-    // assert(board_handle);
+    board_handle = (board_handle_t)malloc(sizeof(struct board_t));
+    if (board_handle == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for board handle");
+        abort();
+    }   
 
     spi_init();
     display_init();
@@ -221,4 +225,14 @@ void board_init(void)
     //     .mic_slot_mask      = I2S_STD_SLOT_LEFT,
     // };
     // audio_simplex_init(&board_handle->audio_handle, &audio_config);
+
+    /*********************************************** 
+                    other function
+    1. sdcard
+    ************************************************/
+
+#if CONFIG_SDCARD_ENABLE
+    ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+#endif
+
 }

@@ -4,7 +4,7 @@ set(SOURCES
 
             )
 
-set(INCLUDE_DIRS "." )
+set(INCLUDE_DIRS "." "boards")
 
 if(DEFINED CONFIG_LVGL_VERSION_MAJOR)
     message("add v9 display files")

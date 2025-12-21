@@ -24,7 +24,7 @@
 static const char *TAG = "board";
 
 //@brief board handle
-board_t board = NULL;
+board_handle_t board_handle = NULL;
 
 // @brief i2c 
 i2c_master_bus_handle_t _i2c_bus = NULL;
@@ -204,8 +204,8 @@ void touch_init(void)
 
 void board_init(void)
 {
-    // board = (board_t)malloc(sizeof(struct board_handle_t));
-    // assert(board);
+    board_handle = (board_handle_t)malloc(sizeof(struct board_t));
+    assert(board_handle);
 
     spi_init();
 
@@ -215,9 +215,20 @@ void board_init(void)
 
     touch_init(); 
 
-    /* ========== other init =========== */
+    /*********************************************** 
+                    other function
+    1. pcf85063a(rtc)
+    2. sdcard
+    ************************************************/
 
+#if CONFIG_SDCARD_ENABLE
     ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+#endif
+
+
+#if CONFIG_PCF85063A_ENABLE
+    ESP_ERROR_CHECK(bsp_pcf85063a_init(&board_handle->pcf85063a, _i2c_bus));
+#endif
 
 
     ESP_LOGI(TAG, "Board initialized successfully");
