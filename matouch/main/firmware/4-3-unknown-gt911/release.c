@@ -18,6 +18,10 @@ static void release_task(void *arg)
 {
     extern void template_image_switch_lvgl(const char *path);
     template_image_switch_lvgl("/sdcard/images");
+
+    // extern void template_lvgl_demos_test();
+    // template_lvgl_demos_test();
+    
     vTaskDelete(NULL);
 }
 
