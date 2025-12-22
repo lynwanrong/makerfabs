@@ -225,12 +225,6 @@ void board_init(void)
     ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
 #endif
 
-
-#if CONFIG_PCF85063A_ENABLE
-    ESP_ERROR_CHECK(bsp_pcf85063a_init(&board_handle->pcf85063a, _i2c_bus));
-#endif
-
-
     ESP_LOGI(TAG, "Board initialized successfully");
 
 }

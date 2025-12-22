@@ -14,6 +14,8 @@
 
 #include "board.h"
 
+#include "pcf8563.h"
+
 static char *TAG = "template";
 
 
@@ -112,13 +114,14 @@ void template_lvgl_demos_test()
 
 
 /* =============================================================================================================
-                                            pcf85063a rtc
+                                            rtc
     ============================================================================================================ */
 
 #if CONFIG_PCF85063A_ENABLE
 static void clock_update_timer_cb(lv_timer_t *timer)
 {
     if (board_handle->pcf85063a == NULL || board_handle->pcf85063a->get_time_data == NULL) {
+        ESP_LOGW(TAG, "board_handle->pcf85063a is NULL");
         return;
     }
 
@@ -181,3 +184,18 @@ void template_pcf85063a_test()
 }
 
 #endif // CONFIG_PCF85063A_ENABLE
+
+
+#if CONFIG_PCF8563_ENABLE
+void template_pcf8563_test()
+{
+    struct tm t;
+    char time_str[32];
+    if (board_handle->pcf8563->get_time(board_handle->pcf8563, &t) == ESP_OK) {
+        ESP_LOGI("APP", "Time: %02d:%02d:%02d", t.tm_hour, t.tm_min, t.tm_sec);
+    } else {
+        ESP_LOGW("APP", "Failed to read RTC time");
+
+    }
+}
+#endif // CONFIG_PCF8563_ENABLE

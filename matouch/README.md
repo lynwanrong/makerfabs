@@ -1,32 +1,18 @@
-# _Sample project_
-
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
-
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
-
-
+# Example Description
+This project includes example code for some MaTouch products.
+This repository is suitable for the [**MaTouch 1.28" ToolSet_Controller**](https://www.makerfabs.com/matouch-1-28-toolset-controller.html).
 
 ## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
+#### MaTouch 1.28" ToolSet_Controller
+Select the development board as 1-28-gc9a01-cst816s.
 
-## Example folder contents
+![image-20251222183148326](https://easyimage.linwanrong.com/i/2025/12/22/uagknl-0.webp)
+This example includes four routines：
+- xuanniu_test：Example of a rotary encoder.
+![image_switch](https://easyimage.linwanrong.com/i/2025/12/22/vt59vi-0.gif)
+- template_image_switch_lvgl: Use LVGL's built-in libturbo-jpeg decoder to load JPG images from the SD card.
+- template_lvgl_demos_test: Examples included with LVGL.
+- template_pcf8563_test: A simple PCF8563 RTC example.
 
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
+![image-20251222183606880](https://easyimage.linwanrong.com/i/2025/12/22/ud6c66-0.webp)
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.

@@ -29,5 +29,10 @@ menu "Board Configuration"
         default n
         help
             Enable PCF85063A RTC support
+    config PCF8563_ENABLE
+        bool "Enable PCF8563 RTC support"
+        default n
+        help
+            Enable PCF8563 RTC support
 
 endmenu

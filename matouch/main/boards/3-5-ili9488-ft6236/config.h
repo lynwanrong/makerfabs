@@ -49,9 +49,9 @@
 #else
 #define DISPLAY_BACKLIGHT_PIN       GPIO_NUM_45
 #endif
-#define DISPLAY_MOSI_PIN            SPI2_MOSI_PIN
-#define DISPLAY_MISO_PIN            SPI2_MISO_PIN
-#define DISPLAY_CLK_PIN             SPI2_CLK_PIN
+#define DISPLAY_MOSI_PIN            SPI3_MOSI_PIN
+#define DISPLAY_MISO_PIN            SPI3_MISO_PIN
+#define DISPLAY_CLK_PIN             SPI3_CLK_PIN
 #define DISPLAY_DC_PIN              GPIO_NUM_21
 #define DISPLAY_RST_PIN             GPIO_NUM_NC
 #define DISPLAY_CS_PIN              GPIO_NUM_15
@@ -89,12 +89,14 @@
 
 #define TOUCH_SDA_PIN               GPIO_NUM_38
 #define TOUCH_SCL_PIN               GPIO_NUM_39
+#define TOUCH_INT_PIN               GPIO_NUM_NC
+#define TOUCH_RST_PIN               GPIO_NUM_NC
 
 #define SDCARD_MOUNT_POINT          "/sdcard"
 #define SDCARD_CS_PIN               GPIO_NUM_1
-#define SDCARD_MISO_PIN             SPI1_MISO_PIN
-#define SDCARD_MOSI_PIN             SPI1_MOSI_PIN
-#define SDCARD_CLK_PIN              SPI1_CLK_PIN
+#define SDCARD_MISO_PIN             SPI2_MISO_PIN
+#define SDCARD_MOSI_PIN             SPI2_MOSI_PIN
+#define SDCARD_CLK_PIN              SPI2_CLK_PIN
 
 
 

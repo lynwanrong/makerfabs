@@ -39,7 +39,7 @@ lv_display_t *spi_lcd_display(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_
         .io_handle = panel_io,
         .panel_handle = panel,
         .control_handle = NULL,
-        .buffer_size = height / 4 * width, // Buffer for 10 lines
+        .buffer_size = height / 10 * width, // Buffer for 10 lines
         .double_buffer = 1,
         .hres = (uint32_t)width,
         .vres = (uint32_t)height,
@@ -55,7 +55,7 @@ lv_display_t *spi_lcd_display(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_
             .buff_dma = 1,
             .buff_spiram = 0,
             .sw_rotate = 0,
-#if CONFIG_BOARD_TYPE_3_5_ili9488_8080 || CONFIG_BOARD_TYPE_3_5_spi_s3
+#if CONFIG_BOARD_TYPE_3_5_IlI9488_FT6236
             .swap_bytes = 0,
 #else
             .swap_bytes = 1,

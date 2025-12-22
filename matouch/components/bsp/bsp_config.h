@@ -27,3 +27,7 @@
 #if CONFIG_PCF85063A_ENABLE
 #include "pcf85063a/bsp_pcf85063a.h"
 #endif
+
+#if CONFIG_PCF8563_ENABLE
+#include "pcf8563/bsp_pcf8563.h"
+#endif

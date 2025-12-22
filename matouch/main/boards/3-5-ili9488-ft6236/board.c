@@ -16,8 +16,6 @@
 
 #include "esp_lvgl_port.h"
 
-
-#include "lv_demos.h"
 #include "lcd_display.h"
 
 #if CONFIG_SPIFFS_ENABLE
@@ -29,7 +27,7 @@
 static const char *TAG = "board";
 
 //@brief board handle
-board_t board = NULL;
+board_handle_t board = NULL;
 
 // @brief i2c 
 i2c_master_bus_handle_t _i2c_bus = NULL;
@@ -87,7 +85,7 @@ void spi_init(void)
     };
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &spi2_cfg, SPI_DMA_CH_AUTO));
 
-    #if CONFIG_3_5_IlI9488_SPI_FT6236
+#if CONFIG_3_5_IlI9488_SPI_FT6236
         const spi_bus_config_t spi3_cfg = {
             .mosi_io_num    = SPI3_MOSI_PIN,
             .miso_io_num    = SPI3_MISO_PIN,
@@ -104,7 +102,8 @@ void spi_init(void)
             .intr_flags = ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM                
         };
         ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &spi3_cfg, SPI_DMA_CH_AUTO)); 
-    #endif
+#endif
+
 }
 
 
@@ -216,11 +215,12 @@ void display_init(void)
     esp_lcd_panel_handle_t disp_panel = NULL;
     esp_lcd_panel_dev_config_t lcd_dev_config = {
         .reset_gpio_num = DISPLAY_RST_PIN,
-        .bits_per_pixel = 16,
+        .bits_per_pixel = 18,
         .rgb_ele_order = DISPLAY_RGB_ORDER,
         .flags = {
             .reset_active_high = 0
-        }
+        },
+        .vendor_config = NULL
     };
 
     ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &lcd_dev_config, DISPLAY_WIDTH * 20 * sizeof(lv_color_t), &disp_panel));
@@ -248,8 +248,8 @@ void touch_init(void)
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = DISPLAY_WIDTH,
         .y_max = DISPLAY_HEIGHT,
-        .rst_gpio_num = GPIO_NUM_NC,
-        .int_gpio_num = GPIO_NUM_NC,
+        .rst_gpio_num = TOUCH_RST_PIN,
+        .int_gpio_num = TOUCH_INT_PIN,
         .levels = {
             .reset = 0,
             .interrupt = 0,
@@ -283,8 +283,8 @@ void touch_init(void)
 
 void board_init(void)
 {
-    // board = (board_t)malloc(sizeof(struct board_handle_t));
-    // assert(board);
+    board = (board_handle_t)malloc(sizeof(struct board_t));
+    assert(board);
 
     spi_init();
 
@@ -294,16 +294,14 @@ void board_init(void)
 
     touch_init(); 
 
-    /*        other init      */
+    /*********************************************** 
+                    other function
+    1. sdcard
+    ************************************************/
+
+#if CONFIG_SDCARD_ENABLE
     ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
-
-
-    // lvgl_port_lock(0);
-
-    // lv_demo_widgets();
-    // lv_demo_benchmark();
-
-    // lvgl_port_unlock();
+#endif
 
     ESP_LOGI(TAG, "Board initialized successfully");
 
