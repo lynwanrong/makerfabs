@@ -1,130 +1,118 @@
 #include "bsp_qmi8658.h"
+#include "esp_check.h"
+#include "esp_err.h"
+#include <stdlib.h>
 
-#include <esp_check.h>
-#include <esp_log.h> 
 
 static const char *TAG = "bsp_qmi8658";
 
-static bsp_qmi8658_t _g_handle = NULL;
+struct bsp_qmi8658_t {
+    bsp_qmi8658_config_t config;    /*!< Configuration */
+    SemaphoreHandle_t lock;         /*!< Mutex for thread safety */
+    qmi8658_dev_t dev;              /*!< QMI8658 device handle */
+};
 
-static esp_err_t _set_arg()
+static esp_err_t _set_arg(bsp_qmi8658_handle_t handle)
 {
     esp_err_t ret = ESP_OK;
 
-    ret |= qmi8658_set_accel_range(&_g_handle->dev, QMI8658_ACCEL_RANGE_8G);
-    ret |= qmi8658_set_accel_odr(&_g_handle->dev, QMI8658_ACCEL_ODR_1000HZ);
-    ret |= qmi8658_set_gyro_range(&_g_handle->dev, QMI8658_GYRO_RANGE_512DPS);
-    ret |= qmi8658_set_gyro_odr(&_g_handle->dev, QMI8658_GYRO_ODR_1000HZ);
+    ret |= qmi8658_set_accel_range(&handle->dev, QMI8658_ACCEL_RANGE_8G);
+    ret |= qmi8658_set_accel_odr(&handle->dev, QMI8658_ACCEL_ODR_1000HZ);
+    ret |= qmi8658_set_gyro_range(&handle->dev, QMI8658_GYRO_RANGE_512DPS);
+    ret |= qmi8658_set_gyro_odr(&handle->dev, QMI8658_GYRO_ODR_1000HZ);
 
-    qmi8658_set_accel_unit_mps2(&_g_handle->dev, true);
-    qmi8658_set_gyro_unit_rads(&_g_handle->dev, true);
-    qmi8658_set_display_precision(&_g_handle->dev, 4);
+    qmi8658_set_accel_unit_mps2(&handle->dev, true);
+    qmi8658_set_gyro_unit_rads(&handle->dev, true);
+    qmi8658_set_display_precision(&handle->dev, 4);
 
-    if(ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to configure QMI8658 sensor");
-        return ret;
-    }
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to configure QMI8658 sensor");
 
     return ret;
 }
 
-static esp_err_t _enable_sensors(uint8_t flags)
+esp_err_t bsp_qmi8658_enable_sensors(bsp_qmi8658_handle_t handle, uint8_t flags)
 {
-    if (!_g_handle) return ESP_ERR_INVALID_ARG;
-    if (xSemaphoreTake(_g_handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
+    if (!handle) return ESP_ERR_INVALID_ARG;
+    if (xSemaphoreTake(handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
         return ESP_ERR_TIMEOUT;
     }
-    esp_err_t err = qmi8658_enable_sensors(&_g_handle->dev, flags);
-    xSemaphoreGive(_g_handle->lock);
+    esp_err_t ret = qmi8658_enable_sensors(&handle->dev, flags);
+    xSemaphoreGive(handle->lock);
+    return ret;
+}
+
+esp_err_t bsp_qmi8658_read_accel(bsp_qmi8658_handle_t handle, float *x, float *y, float *z)
+{
+    if (!handle || !x || !y || !z) return ESP_ERR_INVALID_ARG;
+    if (xSemaphoreTake(handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    esp_err_t ret = qmi8658_read_accel(&handle->dev, x, y, z);
+    xSemaphoreGive(handle->lock);
+    return ret;
+}
+
+esp_err_t bsp_qmi8658_read_gyro(bsp_qmi8658_handle_t handle, float *x, float *y, float *z)
+{
+    if (!handle || !x || !y || !z) return ESP_ERR_INVALID_ARG;
+    if (xSemaphoreTake(handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    esp_err_t err = qmi8658_read_gyro(&handle->dev, x, y, z);
+    xSemaphoreGive(handle->lock);
     return err;
 }
 
-static esp_err_t _read_accel(float *x, float *y, float *z)
+esp_err_t bsp_qmi8658_read_sensor_data(bsp_qmi8658_handle_t handle, qmi8658_data_t *data)
 {
-    if (!_g_handle || !x || !y || !z) return ESP_ERR_INVALID_ARG;
-    if (xSemaphoreTake(_g_handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
+    if (!handle || !data) return ESP_ERR_INVALID_ARG;
+    if (xSemaphoreTake(handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
         return ESP_ERR_TIMEOUT;
     }
-    esp_err_t err = qmi8658_read_accel(&_g_handle->dev, x, y, z);
-    xSemaphoreGive(_g_handle->lock);
-    return err;
+    esp_err_t ret = qmi8658_read_sensor_data(&handle->dev, data);
+    xSemaphoreGive(handle->lock);
+    return ret;
 }
-
-static esp_err_t _read_gyro(float *x, float *y, float *z)
+esp_err_t bsp_qmi8658_init(const bsp_qmi8658_config_t *config, bsp_qmi8658_handle_t *ret_handle)
 {
-    if (!x || !y || !z) return ESP_ERR_INVALID_ARG;
-    if (xSemaphoreTake(_g_handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
-        return ESP_ERR_TIMEOUT;
-    }
-    esp_err_t err = qmi8658_read_gyro(&_g_handle->dev, x, y, z);
-    xSemaphoreGive(_g_handle->lock);
-    return err;
-}
+    ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config is NULL");
 
-static esp_err_t _read_sensor_data(qmi8658_data_t *data)
-{
-    if (!data) return ESP_ERR_INVALID_ARG;
-    if (xSemaphoreTake(_g_handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) != pdTRUE) {
-        return ESP_ERR_TIMEOUT;
-    }
-    esp_err_t err = qmi8658_read_sensor_data(&_g_handle->dev, data);
-    xSemaphoreGive(_g_handle->lock);
-    return err;
-}
-
-static void _delete()
-{
-    if (!_g_handle) return;
-    if (_g_handle->lock) {
-        if (xSemaphoreTake(_g_handle->lock, pdMS_TO_TICKS(QMI8658_LOCK_TIMEOUT_MS)) == pdTRUE) {
-            xSemaphoreGive(_g_handle->lock);
-        }
-        vSemaphoreDelete(_g_handle->lock);
-        _g_handle->lock = NULL;
-    }
-    free(_g_handle);
-    _g_handle = NULL;
-}
-
-esp_err_t bsp_qmi8658_init(bsp_qmi8658_t *handle, i2c_master_bus_handle_t bus_handle)
-{
     esp_err_t ret = ESP_OK;
+    bsp_qmi8658_handle_t _handle = calloc(1, sizeof(struct bsp_qmi8658_t));
+    ESP_RETURN_ON_FALSE(_handle != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for handle");
 
-    if(bus_handle == NULL) {
-        ESP_LOGE(TAG, "Invalid I2C bus handle");
-        return ESP_ERR_INVALID_ARG;
-    }
+    ret = qmi8658_init(&_handle->dev, config->bus_handle, config->i2c_addr);
+    ESP_GOTO_ON_ERROR(ret, err, TAG, "qmi8658_init failed");
 
-    bsp_qmi8658_t _handle = (bsp_qmi8658_t)malloc(sizeof(struct bsp_qmi8658_handle_t));
-    if(!_handle) return ESP_ERR_NO_MEM;
-
-    ret = qmi8658_init(&_handle->dev, bus_handle, QMI8658_ADDRESS_HIGH);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize QMI8658 sensor");
-        free(_handle);
-        return ret;
-    }
-
-    _handle->set_arg            = _set_arg;
-    _handle->enable_sensors     = _enable_sensors;
-    _handle->read_accel         = _read_accel;
-    _handle->read_gyro          = _read_gyro;
-    _handle->read_sensor_data   = _read_sensor_data;
-    _handle->delete             = _delete;
+    ret = _set_arg(_handle);
+    ESP_GOTO_ON_ERROR(ret, err, TAG, "Failed to set QMI8658 arguments");
 
     _handle->lock = xSemaphoreCreateMutex();
-    if (!_handle->lock) {
-        ESP_LOGE(TAG, "Failed to create semaphore");
-        free(_handle);
-        return ESP_ERR_NO_MEM;
-    }
-
+    ESP_GOTO_ON_FALSE(_handle->lock != NULL, ESP_ERR_NO_MEM, err, TAG, "Failed to create semaphore");
     
     /* publish global handle so instance wrappers can access it */
-    _g_handle = _handle;
-    *(handle) = _handle;
+    _handle->config = *config;
+    *ret_handle = _handle;
 
-    _handle->set_arg();
+    return ret;
+
+err:
+    if (_handle->lock) vSemaphoreDelete(_handle->lock);
+    if (_handle) free(_handle);
+    return ret;
+}
+
+esp_err_t bsp_qmi8658_deinit(bsp_qmi8658_handle_t handle)
+{
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle is NULL");
+
+    if (handle->lock) {
+        vSemaphoreDelete(handle->lock);
+        handle->lock = NULL;
+    }
+
+    free(handle);
+    handle = NULL;
 
     return ESP_OK;
 }

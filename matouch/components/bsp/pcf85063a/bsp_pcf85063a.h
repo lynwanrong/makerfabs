@@ -1,6 +1,6 @@
 #pragma once
 #include "pcf85063a.h"
-#include "bsp.h"
+#include "bsp_board.h"
 
 #ifdef __cplusplus
 extern "C" {

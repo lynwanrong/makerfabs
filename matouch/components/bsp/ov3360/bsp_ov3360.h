@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bsp.h"
+#include "bsp_board.h"
 
 typedef struct bsp_ov3660_t *bsp_ov3600_handle_t;
 

@@ -1,7 +1,11 @@
 
+#include "bsp_sdcard.h"
+#include "bsp_spiffs.h"
 #include "config.h"
 #include "board.h"
+#include "esp_err.h"
 #include "esp_lcd_touch_gt911.h"
+#include <assert.h>
 
 
 static const char *TAG = "board";
@@ -175,11 +179,8 @@ void touch_init(void)
 
 void board_init(void)
 {
-    board_handle = (board_handle_t)malloc(sizeof(struct board_t));
-    if (board_handle == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for board handle");
-        abort();
-    }   
+    board_handle = calloc(1, sizeof(struct board_t));
+    assert(board_handle);
 
     spi_init();
     display_init();
@@ -212,7 +213,20 @@ void board_init(void)
     ************************************************/
 
 #if CONFIG_SDCARD_ENABLE
-    ESP_ERROR_CHECK(bsp_sdcard_mount(SDCARD_MOUNT_POINT, SDCARD_CS_PIN));
+    bsp_sdcard_config_t sdcard_config = {
+        .mount_point = SDCARD_MOUNT_POINT,
+        .sd_cs = SDCARD_CS_PIN,
+        .host = SDCARD_SPI_HOST_ID,
+    };
+    ESP_ERROR_CHECK(bsp_sdcard_init(&sdcard_config, &board_handle->sdcard_handle));
+#endif
+
+#if CONFIG_SPIFFS_ENABLE
+    bsp_spiffs_config_t spiffs_config = {
+        .mount_point = SPIFFS_MOUNT_POINT,
+        .partition_label = SPIFFS_PARTITION_LABEL,
+    };
+    ESP_ERROR_CHECK(bsp_spiffs_init(&spiffs_config, &board_handle->spiffs_handle));
 #endif
 
 }

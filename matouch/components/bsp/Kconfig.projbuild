@@ -35,4 +35,13 @@ menu "Board Configuration"
         help
             Enable PCF8563 RTC support
 
+if SPIFFS_ENABLE
+    config BSP_SPIFFS_FORMAT_ON_MOUNT_FAIL
+        bool "Format SPIFFS if mount fails"
+endif
+if SDCARD_ENABLE
+    config BSP_SDCARD_FORMAT_ON_MOUNT_FAIL
+        bool "Format SDCARD if mount fails"
+endif
+
 endmenu

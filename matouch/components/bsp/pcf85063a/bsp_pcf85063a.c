@@ -60,7 +60,6 @@ esp_err_t bsp_pcf85063a_init(const bsp_pcf85063a_config_t *config, bsp_pcf85063a
 
     ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid config");
     ESP_RETURN_ON_FALSE(config->bus_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid bus handle");
-    ESP_RETURN_ON_FALSE(ret_handle != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid return handle");
 
     handle = (bsp_pcf85063a_handle_t)calloc(1, sizeof(struct bsp_pcf85063a_t));
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_NO_MEM, TAG, "No memory for handle");

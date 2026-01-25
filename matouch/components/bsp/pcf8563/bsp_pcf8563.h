@@ -1,7 +1,7 @@
 #pragma once
 
 #include <time.h>
-#include "bsp.h"
+#include "bsp_board.h"
 
 #define PCF8563_LOCK_TIMEOUT_MS 2000
 

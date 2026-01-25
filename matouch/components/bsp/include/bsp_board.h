@@ -3,6 +3,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <driver/i2c_master.h>
+#include <driver/i2s_std.h>
+#include <driver/spi_master.h>
 #include <esp_log.h>
 #include <esp_check.h>
 #include <esp_heap_caps.h>

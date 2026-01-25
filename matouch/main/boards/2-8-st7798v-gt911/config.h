@@ -73,6 +73,11 @@
 #define SDCARD_MISO_PIN             SPI2_MOSI_PIN
 #define SDCARD_MOSI_PIN             SPI2_MOSI_PIN
 #define SDCARD_CLK_PIN              SPI2_CLK_PIN
+#define SDCARD_SPI_HOST_ID          SPI2_HOST
+
+// SPIFFS configuration
+#define SPIFFS_MOUNT_POINT          "/spiffs"
+#define SPIFFS_PARTITION_LABEL      "storage"
 
 
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "audio_player.h"
-#include "bsp.h"
+#include "bsp_board.h"
 
 typedef struct audio_t* audio_handle_t;
 
