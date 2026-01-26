@@ -27,7 +27,7 @@ typedef struct {
     int       (*read)(bsp_audio_handle_t self, void *dest, size_t len, uint32_t timeout_ms);
     
     // 格式配置
-    esp_err_t (*set_format)(bsp_audio_handle_t self, uint32_t sample_rate, uint32_t bits_per_sample, uint32_t channels);
+    esp_err_t (*set_forma)(bsp_audio_handle_t self, uint32_t sample_rate, uint32_t bits_per_sample, uint32_t channels);
 } audio_ops_t;
 
 /**

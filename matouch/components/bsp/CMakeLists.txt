@@ -15,7 +15,7 @@ if(CONFIG_SDCARD_ENABLE)
 endif()
 
 if(CONFIG_AUDIO_ENABLE)
-    list(APPEND SOURCES "audio/no_audio_codec.c")
+    list(APPEND SOURCES "audio/no_codec.c")
     list(APPEND INCLUDE_DIRS "audio")
 endif()
 

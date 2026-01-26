@@ -1,48 +1,5 @@
 #include "no_codec.h"
 
-
-// 检查对象有效性
-#define CHECK_VALID_HANDLE(h, ret_val) \
-    do { \
-        if ((h) == NULL || (h)->priv == NULL) { \
-            ESP_LOGE(TAG, "Invalid parameter"); \
-            return (ret_val); \
-        } \
-    } while(0)
-
-// 检查是否具备发送能力
-#define CHECK_TX_SUPPORT(priv, ret_val) \
-    do { \
-        if ((priv)->tx_handle == NULL) { \
-            ESP_LOGE(TAG, "TX not supported"); \
-            return (ret_val); \
-        } \
-    } while(0)
-
-// 检查是否具备接收能力
-#define CHECK_RX_SUPPORT(priv, ret_val) \
-    do { \
-        if ((priv)->rx_handle == NULL) { \
-            ESP_LOGE(TAG, "RX not supported"); \
-            return (ret_val); \
-        } \
-    } while(0)
-
-#define CHECK_ARG(cond)                                     \
-    ESP_RETURN_ON_FALSE(cond, ESP_ERR_INVALID_ARG, TAG, "Invalid argument: " #cond)
-
-// 场景 2: 专门检查是否已初始化 (自动返回 ESP_ERR_INVALID_STATE)
-#define CHECK_INIT(priv)                                    \
-    ESP_RETURN_ON_FALSE(priv, ESP_ERR_INVALID_STATE, TAG, "Driver not initialized")
-
-// 场景 3: 专门检查内存分配 (自动返回 ESP_ERR_NO_MEM)
-#define CHECK_MEM(ptr)                                      \
-    ESP_RETURN_ON_FALSE(ptr, ESP_ERR_NO_MEM, TAG, "Memory allocation failed")
-
-// 场景 4: 专门检查 TX 能力 (自动返回 ESP_ERR_NOT_SUPPORTED)
-#define CHECK_TX(priv)                                      \
-    ESP_RETURN_ON_FALSE(priv->tx_handle, ESP_ERR_NOT_SUPPORTED, TAG, "TX not supported (RX only)")
-
 static const char *TAG = "no_codec";
 
 typedef struct {
@@ -118,7 +75,7 @@ static esp_err_t _deinit(bsp_audio_handle_t self)
 
 static esp_err_t _mute(bsp_audio_handle_t self, bool mute)
 {
-    ESP_ERROR_ON_FALSE(self != NULL && self->priv != NULL, ESP_FAIL, "self or self->priv is NULL");
+    ESP_RETURN_ON_FALSE(self != NULL && self->priv != NULL, ESP_FAIL, TAG, "self or self->priv is NULL");
     no_codec_data_t *priv = (no_codec_data_t *)self->priv;
     if (mute) {
         int32_t buffer[128] = {0};
@@ -130,24 +87,22 @@ static esp_err_t _mute(bsp_audio_handle_t self, bool mute)
 }
 
 static esp_err_t _set_volume(bsp_audio_handle_t self, int volume) {
-    no_codec_data_t *data = (no_codec_data_t *)self->user_data;
-    data->volume = volume;
+    no_codec_data_t *priv = (no_codec_data_t *)self->priv;
+    priv->volume = volume;
     ESP_LOGI(TAG, "Software volume set to %d (Hardware has no volume control)", volume);
     // 因为没有硬件芯片，这里可能需要设置一个标志位，在 write 函数里通过软件算法缩放 PCM 数据
     return ESP_OK;
 }
 
 static esp_err_t _write(bsp_audio_handle_t self, void *src, size_t len, size_t *bytes_written, uint32_t timeout_ms) {
-    no_codec_data_t *data = (no_codec_data_t *)self->user_data;
+    no_codec_data_t *priv = (no_codec_data_t *)self->priv;
     // 如果需要软件音量处理，在这里对 src 进行修改
-    return i2s_channel_write(data->tx_handle, src, len, bytes_written, timeout_ms);
+    return i2s_channel_write(priv->tx_handle, src, len, bytes_written, timeout_ms);
 }
 
 static esp_err_t _set_format(bsp_audio_handle_t self, uint32_t sample_rate, uint32_t bits_per_sample, uint32_t channels)
 {
     ESP_RETURN_ON_FALSE(self != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
-
-    CHECK_VALID_HANDLE(self, ESP_ERR_INVALID_ARG);
 
     esp_err_t ret = ESP_OK;
 

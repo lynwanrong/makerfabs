@@ -18,8 +18,8 @@
 
 
 #if CONFIG_AUDIO_ENABLE
-#include "../audio/no_audio_codec.h"
-#include "../audio/bsp_wav.h"
+#include "../audio/no_codec.h"
+#include "../audio/bsp_audio.h"
 #endif
 
 

@@ -30,7 +30,7 @@ struct board_t {
 #endif
 // components/bsp/audio/bsp_audio.h
 #if CONFIG_AUDIO_ENABLE
-    audio_handle_t audio_handle;
+    bsp_audio_handle_t audio_handle;
 #endif
 // components/bsp/sdcard/bsp_sdcard.h
 #if CONFIG_SDCARD_ENABLE
