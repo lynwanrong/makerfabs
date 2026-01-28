@@ -1,4 +1,4 @@
-#include "no_codec.h"
+#include "no_audio_codec.h"
 
 static const char *TAG = "no_codec";
 
@@ -7,6 +7,7 @@ typedef struct {
     i2s_chan_handle_t rx_handle;            /*!< I2S RX channel handle */
     bsp_audio_no_codec_config_t config;     /*!< configuration of the codec */
     int volume;                             /*!< volume of the codec */
+    bool is_muted;                          /*!< mute status of the codec */
 } no_codec_data_t;
 
 static esp_err_t _init(bsp_audio_handle_t self)
@@ -16,7 +17,7 @@ static esp_err_t _init(bsp_audio_handle_t self)
     no_codec_data_t *priv = (no_codec_data_t *)self->priv;
     ESP_LOGI(TAG, "Initializing I2S for No-Codec device...");
 
-        i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
 
     // if duplex mode must enable both tx and rx
     if (priv->config.mode == NO_CODEC_MODE_DUPLEX) ret = i2s_new_channel(&chan_cfg, &priv->tx_handle, &priv->rx_handle);
@@ -94,8 +95,27 @@ static esp_err_t _set_volume(bsp_audio_handle_t self, int volume) {
     return ESP_OK;
 }
 
-static esp_err_t _write(bsp_audio_handle_t self, void *src, size_t len, size_t *bytes_written, uint32_t timeout_ms) {
+static esp_err_t _write(bsp_audio_handle_t self, void *src, size_t len, size_t *bytes_written, uint32_t timeout_ms)
+{
+    ESP_RETURN_ON_FALSE(self != NULL && self->priv != NULL, ESP_FAIL, TAG, "self or self->priv is NULL");
+
     no_codec_data_t *priv = (no_codec_data_t *)self->priv;
+    ESP_RETURN_ON_FALSE(priv->tx_handle != NULL, ESP_FAIL, TAG, "TX channel is not initialized");
+
+    if (priv->is_muted) {
+        // 如果静音，写入静音数据
+        int32_t buffer[128] = {0};
+        size_t total_written = 0;
+        while (total_written < len) {
+            size_t to_write = (len - total_written) > sizeof(buffer) ? sizeof(buffer) : (len - total_written);
+            size_t written = 0;
+            i2s_channel_write(priv->tx_handle, buffer, to_write, &written, timeout_ms);
+            total_written += written;
+            if (written == 0) break; // 防止死循环
+        }
+        if (bytes_written) *bytes_written = total_written;
+        return ESP_OK;
+    }
     // 如果需要软件音量处理，在这里对 src 进行修改
     return i2s_channel_write(priv->tx_handle, src, len, bytes_written, timeout_ms);
 }

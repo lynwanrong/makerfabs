@@ -14,7 +14,9 @@ typedef enum {
 
 typedef struct {
     no_codec_mode_t mode;
-    uint32_t sample_rate;
+    
+    int input_sample_rate;
+    int output_sample_rate;
     
     gpio_num_t spk_bclk;
     gpio_num_t spk_ws;
@@ -23,6 +25,11 @@ typedef struct {
     gpio_num_t mic_bclk;
     gpio_num_t mic_ws;
     gpio_num_t mic_din;
+
+    i2s_std_slot_mask_t spk_slot_mask;
+    i2s_std_slot_mask_t mic_slot_mask;
+
+
 
     struct {
         uint8_t enable_mic :1;
@@ -38,7 +45,7 @@ typedef struct {
  * @return
  * - ESP_OK: Success
  */
-esp_err_t bsp_audio_new_no_codec(const bsp_audio_no_codec_config_t *config, bsp_audio_handle_t *ret_handle);
+esp_err_t no_audio_codec_simplex(const bsp_audio_no_codec_config_t *config, bsp_audio_handle_t *ret_handle);
 
 #ifdef __cplusplus
 }

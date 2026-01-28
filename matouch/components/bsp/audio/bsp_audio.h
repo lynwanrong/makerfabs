@@ -28,6 +28,7 @@ typedef struct {
     
     // 格式配置
     esp_err_t (*set_forma)(bsp_audio_handle_t self, uint32_t sample_rate, uint32_t bits_per_sample, uint32_t channels);
+
 } audio_ops_t;
 
 /**
@@ -36,7 +37,18 @@ typedef struct {
  */
 struct bsp_audio_t {
     const audio_ops_t *ops;  // 虚函数表指针
-    void *priv;         // 私有数据指针 (指向具体的 no_codec_t 或 es8311_t)
+    void *priv;
+
+    const bool  duplex;
+    const bool  input_reference;
+    const bool  output_enable;
+    const bool  input_enable;
+    const int   input_sample_rate;
+    const int   output_sample_rate;
+    const int   input_channels;
+    const int   output_channels;
+    const int   output_volume;
+    const float input_gain;
 };
 
 /* =======================================================
