@@ -10,13 +10,6 @@
 #include <esp_heap_caps.h>
 #include <time.h>
 
-#define AUDIO_DATA_BIT_WIDTH        (16)
-#define AUDIO_SLOT_MODE             (1)
-#define AUDIO_SAMPLES               (1024)
-
-#define I2S_HW_VERSION_2
-
-
 #if CONFIG_AUDIO_ENABLE
 #include "../audio/codecs/no_audio_codec.h"
 #include "../audio/bsp_audio.h"

@@ -6,6 +6,15 @@
 extern "C" {
 #endif
 
+#define AUDIO_DATA_BIT_WIDTH        (16)
+#define AUDIO_SLOT_MODE             (1)
+#define AUDIO_SAMPLES               (1024)
+
+#define I2S_HW_VERSION_2
+
+#define AUDIO_CODEC_DMA_DESC_NUM 6
+#define AUDIO_CODEC_DMA_FRAME_NUM 240
+
 typedef struct bsp_audio_t *bsp_audio_handle_t;
 
 /**
@@ -14,7 +23,7 @@ typedef struct bsp_audio_t *bsp_audio_handle_t;
  */
 typedef struct {
     // 初始化/去初始化
-    esp_err_t (*init)(bsp_audio_handle_t self);
+    // esp_err_t (*init)(bsp_audio_handle_t self);
     esp_err_t (*deinit)(bsp_audio_handle_t self);
 
     // 控制接口

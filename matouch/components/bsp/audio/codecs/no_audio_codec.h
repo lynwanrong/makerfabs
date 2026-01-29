@@ -14,6 +14,10 @@ typedef enum {
 
 typedef struct {
     no_codec_mode_t mode;
+
+    bool duplex;
+    // bool input_enable;   // 通过引脚判断是否启用
+    // bool output_enable;
     
     int input_sample_rate;
     int output_sample_rate;
@@ -29,13 +33,7 @@ typedef struct {
     i2s_std_slot_mask_t spk_slot_mask;
     i2s_std_slot_mask_t mic_slot_mask;
 
-
-
-    struct {
-        uint8_t enable_mic :1;
-        uint8_t enable_spk :1;
-    } flag;
-} bsp_audio_no_codec_config_t;
+} no_audio_codec_config_t;
 
 /**
  * @brief Initialize the No-Codec audio device
@@ -45,7 +43,7 @@ typedef struct {
  * @return
  * - ESP_OK: Success
  */
-esp_err_t no_audio_codec_simplex(const bsp_audio_no_codec_config_t *config, bsp_audio_handle_t *ret_handle);
+esp_err_t no_audio_codec_init(const no_audio_codec_config_t *config, bsp_audio_handle_t *ret_handle);
 
 #ifdef __cplusplus
 }
