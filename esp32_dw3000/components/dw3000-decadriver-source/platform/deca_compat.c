@@ -698,7 +698,7 @@ int32_t dwt_writetxdata(uint16_t txDataLength, uint8_t *txDataBytes, uint16_t tx
  * @param txFrameLength - this is the length of TX message (including the 2 byte CRC) - max is 1023
  *                              NOTE: standard PHR mode allows up to 127 bytes
  *                              if > 127 is programmed, DWT_PHRMODE_EXT needs to be set in the phrMode configuration
- *                              see dwt_configure function
+ *                              see dwt_configure funxction
  * @param txBufferOffset - the offset in the tx buffer to start writing the data
  * @param ranging - 1 if this is a ranging frame, else 0
  *

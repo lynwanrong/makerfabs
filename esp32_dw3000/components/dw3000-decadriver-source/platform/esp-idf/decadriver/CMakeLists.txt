@@ -6,8 +6,21 @@ set(srcs
      ../../deca_compat.c
      deca_port.c dw3000_hw.c dw3000_spi.c ../../dw3000_spi_trace.c)
 
+
+file(GLOB_RECURSE EXAMPLES_SRC
+    ${CMAKE_CURRENT_LIST_DIR}/../../../examples/*.c
+)
+
+# message(STATUS "EXAMPLES_SRC contains:")
+# foreach(item IN LISTS EXAMPLES_SRC)
+#     message(STATUS "  ${item}")
+# endforeach()
+
+
+list(APPEND srcs ${EXAMPLES_SRC})
+
 set(incl
-     . ../.. ../../../dwt_uwb_driver
+     . ../.. ../../../dwt_uwb_driver ../../../examples
      ../../../dwt_uwb_driver/lib/qmath/include)
 
 if (CONFIG_DW3000_CHIP_DW3000)
