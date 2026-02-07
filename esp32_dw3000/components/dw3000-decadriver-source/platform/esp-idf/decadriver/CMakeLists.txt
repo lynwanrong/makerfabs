@@ -34,4 +34,4 @@ endif()
 idf_component_register(SRCS ${srcs}
                        PRIV_INCLUDE_DIRS priv
                        INCLUDE_DIRS ${incl}
-                       REQUIRES driver)
+                       REQUIRES driver libdeca)

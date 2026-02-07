@@ -23,13 +23,13 @@
 #include <port.h>
 #include <shared_defines.h>
 #include <shared_functions.h>
+#include <stdint.h>
+#include "dwtime.h"
 
 #if defined(TEST_DS_TWR_RESPONDER)
 
-extern void test_run_info(unsigned char *data);
-
 /* Example application name */
-#define APP_NAME "DS TWR RESP v1.0"
+static const char* LOG_TAG = "DS TWR RESP v1.0";
 
 /* Inter-ranging delay period, in milliseconds. */
 #define RNG_DELAY_MS 1000
@@ -63,13 +63,13 @@ static uint32_t status_reg = 0;
 /* Delay between frames, in UWB microseconds. See NOTE 4 below. */
 /* This is the delay from Frame RX timestamp to TX reply timestamp used for calculating/setting the DW IC's delayed TX function. This includes the
  * frame length of approximately 190 us with above configuration. */
-#define POLL_RX_TO_RESP_TX_DLY_UUS 900
+#define POLL_RX_TO_RESP_TX_DLY_UUS (500 + CPU_PROCESSING_TIME)
 /* This is the delay from the end of the frame transmission to the enable of the receiver, as programmed for the DW IC's wait for response feature. */
-#define RESP_TX_TO_FINAL_RX_DLY_UUS 500
+#define RESP_TX_TO_FINAL_RX_DLY_UUS (100 + CPU_PROCESSING_TIME)
 /* Receive final timeout. See NOTE 5 below. */
-#define FINAL_RX_TIMEOUT_UUS 220
+#define FINAL_RX_TIMEOUT_UUS 0
 /* Preamble timeout, in multiple of PAC size. See NOTE 6 below. */
-#define PRE_TIMEOUT 5
+#define PRE_TIMEOUT 0
 
 /* Timestamps of frames transmission/reception. */
 static uint64_t poll_rx_ts;
@@ -96,10 +96,7 @@ extern dwt_config_t config_options;
 int ds_twr_responder(void)
 {
     /* Print application name on the console. */
-    test_run_info((unsigned char *)APP_NAME);
-
-    /* Configure SPI rate, DW3000 supports up to 38 MHz */
-    port_set_dw_ic_spi_fastrate();
+    LOG_INF("%s", LOG_TAG);
 
     /* Reset DW IC */
     reset_DWIC(); /* Target specific drive of RSTn line into DW IC low for a period. */
@@ -107,36 +104,44 @@ int ds_twr_responder(void)
     Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC
 
     /* Probe for the correct device driver. */
-    if (dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf) == DWT_ERROR)
-    {
-        test_run_info((unsigned char *)"PROBE FAILED");
-        while (1) { };
-    }
+    int cnt = 1000;
+    while ((dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf) != DWT_SUCCESS) && \
+                (cnt-- > 0))
+        Sleep(1);
+    if (cnt <= 0) goto err;
 
-    while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
-
-    if (dwt_initialise(DWT_READ_OTP_ALL) == DWT_ERROR)
-    {
-        test_run_info((unsigned char *)"INIT FAILED     ");
-        while (1) { };
+    cnt = 1000;
+    while (dwt_initialise(DWT_READ_OTP_PID | DWT_READ_OTP_LID | DWT_READ_OTP_BAT
+						 | DWT_READ_OTP_TMP) != DWT_SUCCESS) {
+        cnt--;
+        Sleep(1);
     }
+    if (cnt <= 0) goto err;
+
+    cnt = 1000;
+    while (!dwt_checkidlerc() && (cnt-- > 0)) Sleep(1);
+    if (cnt <= 0) goto err;
+
+    uint32_t dev_id = dwt_readdevid();
+	if (dwt_check_dev_id() != DWT_SUCCESS) {
+		LOG_ERR("UNKNOWN DEV ID: %" PRIX32, dev_id);
+		return -1;
+	} else {
+		LOG_INF("DEV ID: %" PRIX32, dev_id);
+	}
+
+    /* Configure SPI rate, DW3000 supports up to 38 MHz */
+    port_set_dw_ic_spi_fastrate();
 
     /* Configure DW IC. See NOTE 13 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
-    if (dwt_configure(&config_options))
-    {
-        test_run_info((unsigned char *)"CONFIG FAILED     ");
-        while (1) { };
-    }
+    cnt = 1000;
+    while (dwt_configure(&config_options) != DWT_SUCCESS && (cnt-- > 0)) Sleep(1);
+    if (cnt <= 0) goto err;
     
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
-    if(config_options.chan == 5)
-    {
-      dwt_configuretxrf(&txconfig_options);
-    }else
-    {
-      dwt_configuretxrf(&txconfig_options_ch9);
-    }
+    if(config_options.chan == 5) dwt_configuretxrf(&txconfig_options);
+    else dwt_configuretxrf(&txconfig_options_ch9);
     
 
     /* Apply default antenna delay value. See NOTE 1 below. */
@@ -145,16 +150,17 @@ int ds_twr_responder(void)
 
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help debug, and also TX/RX LEDs
      * Note, in real low power applications the LEDs should not be used. */
-    dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
-    // dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
+    // dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+    dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
     uint32_t ranging_samples = 0;
 
     /* Loop forever responding to ranging requests. */
-    while (1)
-    {
+    while (1) {
+        // 在指定时间内未收到前导码时将接收器设置为超时并禁用
         dwt_setpreambledetecttimeout(0);
         /* Clear reception timeout to start next ranging process. */
+        // 在指定时间内未收到任何帧时将接收器设置为超时并禁用，最大接受超时时间约为1.0754秒，设置0秒则禁用超时功能
         dwt_setrxtimeout(0);
 
         /* Activate reception immediately. */
@@ -163,8 +169,7 @@ int ds_twr_responder(void)
         /* Poll for reception of a frame or error/timeout. See NOTE 8 below. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR), 0);
 
-        if (status_reg & DWT_INT_RXFCG_BIT_MASK)
-        {
+        if (status_reg & DWT_INT_RXFCG_BIT_MASK) {
             uint16_t frame_len;
 
             /* Clear good RX frame event in the DW IC status register. */
@@ -172,16 +177,14 @@ int ds_twr_responder(void)
 
             /* A frame has been received, read it into the local buffer. */
             frame_len = dwt_getframelength(0);
-            if (frame_len <= RX_BUF_LEN)
-            {
+            if (frame_len <= RX_BUF_LEN) {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
             }
 
             /* Check that the frame is a poll sent by "DS TWR initiator" example.
              * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
             rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0)
-            {
+            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) {
                 uint32_t resp_tx_time;
                 int ret;
 
@@ -190,10 +193,13 @@ int ds_twr_responder(void)
 
                 /* Set send time for response. See NOTE 9 below. */
                 resp_tx_time = (poll_rx_ts + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
+                // 设置发送延迟
                 dwt_setdelayedtrxtime(resp_tx_time);
 
                 /* Set expected delay and timeout for final message reception. See NOTE 4 and 5 below. */
+                // 设置发送完成后在指定时间开启接收使能
                 dwt_setrxaftertxdelay(RESP_TX_TO_FINAL_RX_DLY_UUS);
+                // 设置接收帧超时时间
                 dwt_setrxtimeout(FINAL_RX_TIMEOUT_UUS);
                 /* Set preamble timeout for expected frames. See NOTE 6 below. */
                 dwt_setpreambledetecttimeout(PRE_TIMEOUT);
@@ -205,8 +211,11 @@ int ds_twr_responder(void)
                 ret = dwt_starttx(DWT_START_TX_DELAYED | DWT_RESPONSE_EXPECTED);
 
                 /* If dwt_starttx() returns an error, abandon this ranging exchange and proceed to the next one. See NOTE 11 below. */
-                if (ret == DWT_ERROR)
-                {
+                if (ret == DWT_ERROR) {
+                    uint64_t now = dw_get_systime();
+                    uint64_t target = (uint64_t)resp_tx_time << 8;
+                    LOG_ERR("Late TX! Now: %llu, Target: %llu, Diff: %lld DTU", 
+                                now, target, (int64_t)(now - target));
                     continue;
                 }
 
@@ -216,23 +225,20 @@ int ds_twr_responder(void)
                 /* Increment frame sequence number after transmission of the response message (modulo 256). */
                 frame_seq_nb++;
 
-                if (status_reg & DWT_INT_RXFCG_BIT_MASK)
-                {
+                if (status_reg & DWT_INT_RXFCG_BIT_MASK) {
                     /* Clear good RX frame event and TX frame sent in the DW IC status register. */
                     dwt_writesysstatuslo(DWT_INT_RXFCG_BIT_MASK | DWT_INT_TXFRS_BIT_MASK);
 
                     /* A frame has been received, read it into the local buffer. */
                     frame_len = dwt_getframelength(0);
-                    if (frame_len <= RX_BUF_LEN)
-                    {
+                    if (frame_len <= RX_BUF_LEN) {
                         dwt_readrxdata(rx_buffer, frame_len, 0);
                     }
 
                     /* Check that the frame is a final message sent by "DS TWR initiator" example.
                      * As the sequence number field of the frame is not used in this example, it can be zeroed to ease the validation of the frame. */
                     rx_buffer[ALL_MSG_SN_IDX] = 0;
-                    if (memcmp(rx_buffer, rx_final_msg, ALL_MSG_COMMON_LEN) == 0)
-                    {
+                    if (memcmp(rx_buffer, rx_final_msg, ALL_MSG_COMMON_LEN) == 0) {
                         uint32_t poll_tx_ts, resp_rx_ts, final_tx_ts;
                         uint32_t poll_rx_ts_32, resp_tx_ts_32, final_rx_ts_32;
                         double Ra, Rb, Da, Db;
@@ -263,29 +269,31 @@ int ds_twr_responder(void)
 
                         /* Print computed distance on the console. */
                         sprintf(dist_str, "%lu DIST: %3.2f m", ranging_samples, distance);
-                        test_run_info((unsigned char *)dist_str);
+                        LOG_INF("distance: %s", dist_str);
 
                         /* as DS-TWR initiator is waiting for RNG_DELAY_MS before next poll transmission
                          * we can add a delay here before RX is re-enabled again
                          */
-                        Sleep(RNG_DELAY_MS - 10); // start couple of ms earlier
+                        // Sleep(RNG_DELAY_MS - 10); // start couple of ms earlier
                     }
-                }
-                else
-                {
+                } else {
+                    LOG_ERR("final_rx error");
                     /* Clear RX error/timeout events in the DW IC status register. */
                     dwt_writesysstatuslo(SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
                 }
             }
-        }
-        else
-        {
+        } else {
+            LOG_ERR("poll_rx error");
             /* Clear RX error/timeout events in the DW IC status register. */
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
         }
     }
+
+err:
+    LOG_ERR("ds_twr_initiator init failed");
+    return DWT_ERROR;
 }
-#endif
+#endif // TEST_DS_TWR_RESPONDER
 /*****************************************************************************************************************************************************
  * NOTES:
  *

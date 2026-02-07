@@ -216,6 +216,8 @@ extern "C"
      */
     void waitforsysstatus(uint32_t *lo_result, uint32_t *hi_result, uint32_t lo_mask, uint32_t hi_mask);
 
+    void log_dwt_status(uint32_t status);
+
 #ifdef __cplusplus
 }
 #endif

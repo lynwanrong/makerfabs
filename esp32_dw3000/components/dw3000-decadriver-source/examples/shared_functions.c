@@ -13,12 +13,11 @@
 #include <config_options.h>
 #include <deca_device_api.h>
 #include <deca_types.h>
-// #include <port.h>
+#include <port.h>
 #include <shared_defines.h>
 #include <shared_functions.h>
 #include <stdlib.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include "log.h"
 
 extern dwt_config_t config_options;
 
@@ -607,14 +606,17 @@ void waitforsysstatus(uint32_t *lo_result, uint32_t *hi_result, uint32_t lo_mask
                     break;
                 }
             }
-            vTaskDelay(pdMS_TO_TICKS(1));
+            // Sleep(0);
+            // port_task_yield();
+            // port_esp_task_wdt_reset();
+
         }
     }
     // if only a mask value for the system status register (higher 32-bits) is set
     else if (hi_mask)
     {
         while (!((hi_result_tmp = dwt_readsysstatushi()) & (hi_mask))) {
-            vTaskDelay(pdMS_TO_TICKS(1));
+            // Sleep(1);
         };
     }
 
@@ -628,3 +630,85 @@ void waitforsysstatus(uint32_t *lo_result, uint32_t *hi_result, uint32_t lo_mask
         *hi_result = hi_result_tmp;
     }
 }
+
+#define LOG_TAG "test"
+void log_dwt_status(uint32_t status)
+{
+    LOG_INF("=== Decawave Status Reg: 0x%08X ===", (unsigned int)status);
+
+    if (status == 0) {
+        LOG_INF("  [IDLE] No flags set (Chip is idle or SPI error)");
+        return;
+    }
+
+    // ----------------------------------------------------------------
+    // 1. 严重错误 (RX Errors & System Errors)
+    // ----------------------------------------------------------------
+    if (status & DWT_INT_RXFCE_BIT_MASK) {
+        LOG_ERR("  [ERR] RX CRC Error (RXFCE) -> 收到数据但校验失败 (距离远/干扰/遮挡)");
+    }
+    if (status & DWT_INT_RXPHE_BIT_MASK) {
+        LOG_ERR("  [ERR] PHY Header Error (RXPHE) -> 解析头部失败 (PRF/速率不匹配 或 强噪声)");
+    }
+    if (status & DWT_INT_RXFSL_BIT_MASK) {
+        LOG_ERR("  [ERR] Reed-Solomon Error (RXFSL) -> 数据严重损坏 (同步丢失)");
+    }
+    if (status & DWT_INT_RXSFDD_BIT_MASK) {
+        // SFD detected 只是状态，但如果只有 SFD 没有 RXFCG，通常意味着后面断了
+        // LOG_DBG("  [INFO] SFD Detected"); 
+    }
+    if (status & DWT_INT_RXSTO_BIT_MASK) {
+        LOG_ERR("  [ERR] SFD Timeout (RXSTO) -> 只有前导码，没等到SFD (假唤醒/噪声)");
+    }
+    if (status & DWT_INT_RXPTO_BIT_MASK) {
+        LOG_ERR("  [ERR] Preamble Timeout (RXPTO) -> 超时未检测到信号");
+    }
+    if (status & DWT_INT_RXFTO_BIT_MASK) {
+        LOG_ERR("  [ERR] RX Frame Wait Timeout (RXFTO) -> 帧等待超时");
+    }
+    if (status & DWT_INT_ARFE_BIT_MASK) {
+        LOG_ERR("  [ERR] Frame Filtering Rejection (ARFE) -> 收到包但被过滤 (非目标地址)");
+    }
+    if (status & DWT_INT_RXOVRR_BIT_MASK) {
+        LOG_ERR("  [ERR] RX Overrun (RXOVRR) -> 接收缓冲区溢出 (MCU处理太慢)");
+    }
+    if (status & DWT_INT_CIAERR_BIT_MASK) {
+        LOG_ERR("  [ERR] CIA Error (CIAERR) -> 累积脉冲估计算法错误");
+    }
+    if (status & DWT_INT_SPICRCE_BIT_MASK) {
+        LOG_ERR("  [ERR] SPI CRC Error -> SPI通讯线路干扰");
+    }
+
+    // ----------------------------------------------------------------
+    // 2. 警告 (Warnings)
+    // ----------------------------------------------------------------
+    if (status & DWT_INT_HPDWARN_BIT_MASK) {
+        LOG_WARN("  [WARN] Half Period Warning (HPDWARN) -> 延迟TX/RX时间设置过晚 (Late TX/RX)");
+    }
+    if (status & DWT_INT_CPERR_BIT_MASK) {
+        LOG_WARN("  [WARN] STS Quality Error (CPERR)");
+    }
+    if (status & DWT_INT_VWARN_BIT_MASK) {
+        LOG_WARN("  [WARN] Voltage Warning (VWARN) -> 电压不稳/电池低电");
+    }
+
+    // ----------------------------------------------------------------
+    // 3. 正常状态 (Success / Info)
+    // ----------------------------------------------------------------
+    if (status & DWT_INT_RXFCG_BIT_MASK) {
+        LOG_INF("  [OK] RX Good Frame (RXFCG) -> 成功接收");
+    }
+    if (status & DWT_INT_TXFRS_BIT_MASK) {
+        LOG_INF("  [OK] TX Frame Sent (TXFRS) -> 发送完成");
+    }
+    if (status & DWT_INT_SPIRDY_BIT_MASK) {
+        LOG_INF("  [INFO] SPI Ready");
+    }
+    if (status & DWT_INT_RXPRD_BIT_MASK) {
+        // LOG_INF("  [INFO] Preamble Detected");
+    }
+    if (status & DWT_INT_RXPHD_BIT_MASK) {
+        // LOG_INF("  [INFO] PHY Header Detected");
+    }
+}
+

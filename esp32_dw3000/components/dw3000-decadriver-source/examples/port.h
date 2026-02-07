@@ -24,6 +24,10 @@ void port_set_dw_ic_spi_fastrate(void);
 
 void Sleep(uint32_t delay_ms);
 
+void port_task_yield(void);
+void port_esp_task_wdt_reset();
+
+
 #ifdef __cplusplus
 }
 #endif

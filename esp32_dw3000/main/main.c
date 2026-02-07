@@ -5,9 +5,17 @@
 #include "examples_defines.h"
 
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 
 void app_main(void)
 {
+    // esp_task_wdt_config_t _config = {
+    //     .timeout_ms = 5000,
+    //     .idle_core_mask = (1 << 0),
+    //     .trigger_panic = true,
+    // };
+    // esp_task_wdt_add(NULL);
+
     dw3000_hw_init();
 
     build_examples();

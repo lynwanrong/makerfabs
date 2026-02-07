@@ -25,8 +25,6 @@
 #include <shared_defines.h>
 #include <shared_functions.h>
 
-#define TEST_DS_TWR_INITIATOR
-
 #if defined(TEST_DS_TWR_INITIATOR)
 
 /* Example application name and version to print to the console. */
@@ -36,7 +34,7 @@ static const char* LOG_TAG = "DS TWR INIT v1.0";
 #define SLEEP_EN 0
 
 /* Inter-ranging delay period, in milliseconds. */
-#define RNG_DELAY_MS 1000
+#define RNG_DELAY_MS 20
 
 /* Default antenna delay values for 64 MHz PRF. See NOTE 1 below. */
 #define TX_ANT_DLY 16385
@@ -101,7 +99,7 @@ int ds_twr_initiator(void)
     LOG_INF("%s", LOG_TAG);
 
     /* Configure SPI rate, DW3000 supports up to 38 MHz */
-    port_set_dw_ic_spi_fastrate();
+    // port_set_dw_ic_spi_fastrate();
 
     /* Reset DW IC */
     reset_DWIC(); /* Target specific drive of RSTn line into DW IC low for a period. */
@@ -109,47 +107,37 @@ int ds_twr_initiator(void)
     Sleep(2); // Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC
 
     /* Probe for the correct device driver. */
-    if (dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf) == DWT_ERROR)
-    {
-        LOG_INF("PROBE FAILED");
-        while (1) { };
-    }
+    int cnt = 1000;
+    while ((dwt_probe((struct dwt_probe_s *)&dw3000_probe_interf) != DWT_SUCCESS) && \
+                (cnt-- > 0))
+        Sleep(1);
+    if (cnt <= 0) goto err;
 
-#if SLEEP_EN
-    int32_t wakeup_to = (int32_t)DWT_DW_IDLE;
-    // For DW3000-based devices it is recommended to wakeup in IDLE_RC state speed up the wakeup process
-    uint32_t dev_id;
-    dev_id = dwt_readdevid();
-    if ((dev_id == (uint32_t)DWT_DW3000_DEV_ID) || ((dev_id == (uint32_t)DWT_DW3000_PDOA_DEV_ID)))
-    {
-        wakeup_to = (int32_t)DWT_DW_IDLE_RC;
+    cnt = 1000;
+    while (dwt_initialise(DWT_READ_OTP_PID | DWT_READ_OTP_LID | DWT_READ_OTP_BAT
+						 | DWT_READ_OTP_TMP) != DWT_SUCCESS) {
+        cnt--;
+        Sleep(1);
     }
-#endif
+    if (cnt <= 0) goto err;
 
-    while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
+    cnt = 1000;
+    while (!dwt_checkidlerc() && (cnt-- > 0)) Sleep(1);
+    if (cnt <= 0) goto err;
 
-    if (dwt_initialise(DWT_READ_OTP_ALL) == DWT_ERROR)
-    {
-        LOG_INF("INIT FAILED");
-        while (1) { };
-    }
+    port_set_dw_ic_spi_fastrate();
 
     /* Configure DW IC. See NOTE 14 below. */
     /* if the dwt_configure returns DWT_ERROR either the PLL or RX calibration has failed the host should reset the device */
-    if (dwt_configure(&config_options))
-    {
-        LOG_INF("INIT FAILED");
-        while (1) { };
-    }
+    cnt = 1000;
+    while (dwt_configure(&config_options) != DWT_SUCCESS && (cnt-- > 0)) Sleep(1);
+    if (cnt <= 0) goto err;
 
     /* Configure the TX spectrum parameters (power, PG delay and PG count) */
     if(config_options.chan == 5)
-    {
-      dwt_configuretxrf(&txconfig_options);
-    }else
-    {
-      dwt_configuretxrf(&txconfig_options_ch9);
-    }
+        dwt_configuretxrf(&txconfig_options);
+    else
+        dwt_configuretxrf(&txconfig_options_ch9);
 
     /* Apply default antenna delay value. See NOTE 1 below. */
     dwt_setrxantennadelay(RX_ANT_DLY);
@@ -163,18 +151,11 @@ int ds_twr_initiator(void)
 
     /* Next can enable TX/RX states output on GPIOs 5 and 6 to help debug, and also TX/RX LEDs
      * Note, in real low power applications the LEDs should not be used. */
-    dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
-    // dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
-#if SLEEP_EN
-    dwt_configuresleep(DWT_CONFIG, (DWT_PRES_SLEEP | DWT_WAKE_CSN | DWT_WAKE_WUP | DWT_SLP_EN));
-    /* Clear all spurious interrupts by writing '1' into system register. */
-    uint32_t bitmask = dwt_readsysstatuslo();
-    dwt_writesysstatuslo(bitmask);
-#endif
+    // dwt_setlnapamode(DWT_LNA_ENABLE | DWT_PA_ENABLE);
+    dwt_setleds(DWT_LEDS_ENABLE | DWT_LEDS_INIT_BLINK);
 
     /* Loop forever initiating ranging exchanges. */
-    while (1)
-    {
+    while (1) {
         /* Write frame data to DW IC and prepare transmission. See NOTE 9 below. */
         tx_poll_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
         dwt_writetxdata(sizeof(tx_poll_msg), tx_poll_msg, 0);  /* Zero offset in TX buffer. */
@@ -182,7 +163,7 @@ int ds_twr_initiator(void)
 
         /* Start transmission, indicating that a response is expected so that reception is enabled automatically after the frame is sent and the delay
          * set by dwt_setrxaftertxdelay() has elapsed. */
-        dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED);
+        if (dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED) != DWT_SUCCESS) LOG_ERR("poll_tx error");
 
         /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 10 below. */
         waitforsysstatus(&status_reg, NULL, (DWT_INT_RXFCG_BIT_MASK | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR), 0);
@@ -190,8 +171,7 @@ int ds_twr_initiator(void)
         /* Increment frame sequence number after transmission of the poll message (modulo 256). */
         frame_seq_nb++;
 
-        if (status_reg & DWT_INT_RXFCG_BIT_MASK)
-        {
+        if (status_reg & DWT_INT_RXFCG_BIT_MASK) {
             uint16_t frame_len;
 
             /* Clear good RX frame event and TX frame sent in the DW IC status register. */
@@ -199,8 +179,7 @@ int ds_twr_initiator(void)
 
             /* A frame has been received, read it into the local buffer. */
             frame_len = dwt_getframelength(0);
-            if (frame_len <= RX_BUF_LEN)
-            {
+            if (frame_len <= RX_BUF_LEN) {
                 dwt_readrxdata(rx_buffer, frame_len, 0);
             }
 
@@ -235,8 +214,7 @@ int ds_twr_initiator(void)
 
                 ret = dwt_starttx(DWT_START_TX_DELAYED);
                 /* If dwt_starttx() returns an error, abandon this ranging exchange and proceed to the next one. See NOTE 13 below. */
-                if (ret == DWT_SUCCESS)
-                {
+                if (ret == DWT_SUCCESS) {
                     /* Poll DW IC until TX frame sent event set. See NOTE 10 below. */
                     waitforsysstatus(NULL, NULL, DWT_INT_TXFRS_BIT_MASK, 0);
 
@@ -245,59 +223,24 @@ int ds_twr_initiator(void)
 
                     /* Increment frame sequence number after transmission of the final message (modulo 256). */
                     frame_seq_nb++;
+                } else {
+                    LOG_ERR("final_tx error");
                 }
             }
-        }
-        else
-        {
+        } else {
+            LOG_ERR("resp_rx error");
+            // log_dwt_status(dwt_readsysstatuslo());
             /* Clear RX error/timeout events in the DW IC status register. */
             dwt_writesysstatuslo(SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR | DWT_INT_TXFRS_BIT_MASK);
         }
-     
-#if SLEEP_EN
-        /* Put DW IC to sleep. Go to IDLE state after wakeup*/
-        dwt_entersleep(wakeup_to);
-
         /* Execute a delay between ranging exchanges. */
         Sleep(RNG_DELAY_MS);
-
-        /* Wake DW IC up. See NOTE 6 below. */
-        dwt_wakeup_ic();
-
-        /* Time needed for DW3000 to start up (transition from INIT_RC to IDLE_RC, or could wait for SPIRDY event)*/
-        Sleep(2);
-
-        while (!dwt_checkidlerc()) /* Need to make sure DW IC is in IDLE_RC before proceeding */ { };
-
-        /* Restore the required configurations on wake-up. This function must be called each time we wake-up from sleep. */
-        dwt_restore_common();
-
-        /* We are using both TX and RX hence we need to use DWT_RESTORE_TXRX_MODE.
-           ADC calibration is initially performed when dwt_configure() is called,
-           so we do not need to run it after every wake-up.
-           Current guidelines recommend to force ADC calibration only:
-                - After every 10 deg drop when temperature <= -10 C
-                - Once when temperature > -10 and < 20
-                - Once when temperature >= 20
-            To force ADC calibration, add DWT_FORCE_ADCOFFSET_CAL to the restore mask.
-         */
-        if(dwt_restore_txrx(DWT_RESTORE_TXRX_MODE /*| DWT_FORCE_ADCOFFSET_CAL*/) != (int32_t)DWT_SUCCESS)
-        {
-            LOG_INFO("RESTORE TXRX FAILED");
-            while (1) { };
-        }
-
-        /* Clear all spurious interrupts by writing '1' into system register. */
-        bitmask = dwt_readsysstatuslo();
-        dwt_writesysstatuslo(bitmask);
-
-#else
-        /* Execute a delay between ranging exchanges. */
-        Sleep(RNG_DELAY_MS);
-#endif
     }
+err:
+    LOG_ERR("ds_twr_initiator init failed");
+    return DWT_ERROR;
 }
-#endif
+#endif // TEST_DS_TWR_INITIATOR
 /*****************************************************************************************************************************************************
  * NOTES:
  *
