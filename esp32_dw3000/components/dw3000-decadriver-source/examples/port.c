@@ -21,14 +21,3 @@ void Sleep(uint32_t delay_ms)
 {
     vTaskDelay(pdMS_TO_TICKS(delay_ms));
 }
-
-
-void port_task_yield(void)
-{
-    taskYIELD();
-}
-
-void port_esp_task_wdt_reset()
-{
-    esp_task_wdt_reset();
-}

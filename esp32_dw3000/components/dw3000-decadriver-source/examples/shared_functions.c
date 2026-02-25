@@ -607,8 +607,7 @@ void waitforsysstatus(uint32_t *lo_result, uint32_t *hi_result, uint32_t lo_mask
                 }
             }
             // Sleep(0);
-            // port_task_yield();
-            // port_esp_task_wdt_reset();
+            deca_usleep(10);
 
         }
     }
@@ -617,6 +616,7 @@ void waitforsysstatus(uint32_t *lo_result, uint32_t *hi_result, uint32_t lo_mask
     {
         while (!((hi_result_tmp = dwt_readsysstatushi()) & (hi_mask))) {
             // Sleep(1);
+            deca_usleep(10);
         };
     }
 
